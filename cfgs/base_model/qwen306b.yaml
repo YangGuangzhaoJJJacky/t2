@@ -1,0 +1,4 @@
+base_model:
+  _target_: base_model.Qwen306B
+
+base_model_name: qwen306b
