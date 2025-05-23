@@ -106,6 +106,7 @@ def main(cfg):
     vllm_model = task_loader.get_vllm_model(model_id=model_id)
 
     train_eval, *test_evals = task_loader.get_evaluator()
+    #print(train_eval, *test_evals)
     if task_loader.has_transfer_split:
         test_eval, transfer_eval = test_evals
     else:
@@ -312,7 +313,7 @@ def main(cfg):
             metrics_to_log=metrics_to_log,
             vllm_model=vllm_model,
         )
-
+ 
         with torch.no_grad():
             lists_to_log = {}
             grads = [p.grad for p in policy.trainable_params]

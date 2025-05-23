@@ -5,7 +5,7 @@ from .base import BaseModel
 
 class Qwen306B(BaseModel):
     def __init__(self):
-        self.model_id = "Qwen/Qwen3-0.6B"
+        self.model_id = "models/Qwen3-0.6B"
         self.dec_param_file_n = "Qwen3_decomposed_params.pt"
 
     def get_model_id(self):

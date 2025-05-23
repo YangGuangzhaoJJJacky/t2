@@ -13,6 +13,7 @@ class Mbpp2Task(Task):
         self.model_to_template = {
             "meta-llama/Meta-Llama-3-8B-Instruct": CODE_PROMPT,
             "mistralai/Mistral-7B-Instruct-v0.3": CODE_PROMPT,
+            "models/Qwen3-0.6B": CODE_PROMPT
         }
         self.system_msg = (
             "You are an exceptionally intelligent coding assistant that "
@@ -100,7 +101,7 @@ class Mbpp2Task(Task):
             max_model_len=1024,
             gpu_memory_utilization=0.8,
             enforce_eager=True,
-            dtype="bfloat16",
+            dtype="float16",
             download_dir=get_download_dir(),
         )
         chat_template = self.model_to_template[model_id]

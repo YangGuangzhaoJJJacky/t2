@@ -9,7 +9,8 @@ from ..models import GenerationRequest, Message, Model
 from .base import Task, TaskResult
 
 with try_import() as _imports:
-    import fasttext
+    #import fasttext
+    pass
 
 _imports.check()
 
@@ -47,11 +48,11 @@ class LanguageRestrictedMathTask(Task):
         self.samples = list(samples)
         self.languages = languages
         self.context_messages = context_messages
-        if len(self.languages) != 0:
-            lid176ftz_path = huggingface_hub.hf_hub_download(
-                "julien-c/fasttext-language-id", "lid.176.ftz"
-            )
-            self.lid_model = fasttext.load_model(lid176ftz_path)
+        #if len(self.languages) != 0:
+            #lid176ftz_path = huggingface_hub.hf_hub_download(
+                #"julien-c/fasttext-language-id", "lid.176.ftz"
+            #)
+            #self.lid_model = fasttext.load_model(lid176ftz_path)
 
     @property
     def num_samples(self) -> int:
@@ -76,10 +77,12 @@ class LanguageRestrictedMathTask(Task):
         for sample, result in zip(samples, model.generate(requests)):
             output = result.generation
             prediction = extract_answer_number(result.generation)
+            #if len(self.languages) != 0:
+                #lid_probs = dict(
+                    #zip(*self.lid_model.predict(output.replace("\n", ""), k=-1))
+                #)
             if len(self.languages) != 0:
-                lid_probs = dict(
-                    zip(*self.lid_model.predict(output.replace("\n", ""), k=-1))
-                )
+                lid_probs = {f"__label__{lang}": 1.0 for lang in self.languages}
 
             sample_details.append(
                 dict(

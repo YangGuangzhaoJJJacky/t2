@@ -1,7 +1,7 @@
 # !/bin/bash
 export HYDRA_FULL_ERROR=1
 # Task Selection
-TASK="mbpp2" # Available options: mbpp2, gsm8k, ai2_arc, cls
+TASK="iot" # Available options: mbpp2, gsm8k, ai2_arc, cls
 
 # Training Setting
 NUM_ITERS=200
