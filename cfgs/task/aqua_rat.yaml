@@ -1,0 +1,5 @@
+task_name: aqua_rat
+node: 0
+task_loader:
+  _target_: tasks.AquaRatTask
+  node: ${node}

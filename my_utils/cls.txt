@@ -1,0 +1,77 @@
+1. Probability & Statistics
+	•	Includes classical and conditional probability, independent/mutually exclusive events
+	•	Permutations and combinations, sampling, expected value, variance, standard deviation
+	•	Normal distribution, central tendencies (mean, median, mode)
+Explanation: Focuses on quantifying uncertainty and data analysis, requiring both discrete counting and continuous distribution understanding.
+
+⸻
+
+2. Number Theory & Integer Properties
+	•	Integer operations, parity (odd/even), primes and composites
+	•	Factors, multiples, GCD (Greatest Common Divisor), LCM (Least Common Multiple)
+	•	Modular arithmetic, remainders, digit-based problems
+Explanation: Emphasizes understanding the structure and properties of integers through factorization, divisibility, and modular relationships.
+
+⸻
+
+3. Algebra & Equations
+	•	Linear equations (single/multi-variable), quadratic equations, root relationships
+	•	Polynomial and rational expressions, radicals, exponents, logarithms
+	•	Absolute value equations/inequalities, algebraic identities, functional equations
+Explanation: Involves constructing and solving symbolic representations of mathematical relationships, using transformations and manipulation.
+
+⸻
+
+4. Ratios, Percentages & Proportion Applications
+	•	Ratio and proportion, allocation problems, mixture/concentration
+	•	Percentage increase/decrease, profit/loss, markup/discount
+	•	Rapid estimation and chain ratio calculations
+Explanation: Centers around understanding relative quantities and applying them to real-life scenarios involving finance, mixtures, and scaling.
+
+⸻
+
+5. Averages & Data Analysis
+	•	Simple and weighted averages, mean adjustments
+	•	Impacts of adding/removing data on the mean
+	•	Graph/table interpretation (e.g., line graphs, bar charts)
+Explanation: Evaluates a student’s ability to compute, interpret, and manipulate averages in dynamic or tabulated datasets.
+
+⸻
+
+6. Geometry & Measurement
+	•	Plane geometry: triangles, quadrilaterals, circles – perimeter, area
+	•	Solid geometry: prisms, cylinders, cones, spheres – volume, surface area
+	•	Coordinate geometry: slopes, distances, midpoints
+Explanation: Involves spatial reasoning and applying geometric formulas to compute dimensions, shapes, and their relationships.
+
+⸻
+
+7. Time, Speed & Distance
+	•	Problems involving meeting/relative motion, chase scenarios
+	•	Average speed, train/bridge problems, circular tracks
+	•	Real-life travel and movement-based contexts
+Explanation: Centers around modeling physical motion using distance = speed × time, including multi-object interactions.
+
+⸻
+
+8. Work & Rate Problems
+	•	Cooperative work (people/machines), remaining work
+	•	Pipes and cisterns, batching, alternate shifts
+	•	Inverse proportionality of rate and time
+Explanation: Applies the concept of work = rate × time, focusing on multi-agent collaboration and task completion efficiency.
+
+⸻
+
+9. Sequences & Series
+	•	Arithmetic and geometric progressions (formulas, sums)
+	•	Recursive/defined sequences, Fibonacci, periodic or patterned sequences
+	•	Rule-based prediction and term computation
+Explanation: Trains pattern recognition and inductive reasoning through formulas or recursive definitions to identify terms and sums.
+
+⸻
+
+10. Word Problems & Logical Reasoning
+	•	Real-world math: investment, profit-sharing, age, population changes
+	•	Set theory, inclusion-exclusion, seating arrangements, logical deduction
+	•	Multi-step, cross-topic problem-solving
+Explanation: Tests the ability to build models and reason through complex scenarios that integrate multiple math concepts or logical steps.
