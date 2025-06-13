@@ -86,7 +86,7 @@ for i, metric in enumerate(metrics):
         plt.legend()
 
 plt.tight_layout()
-plt.suptitle("Training Metrics (Red stars mark iter=0 points)", fontsize=18, y=1.02)
+plt.suptitle("Training Metrics (Red point mark the tests after exchange before train)", fontsize=18, y=1.02)
 
 os.makedirs("results", exist_ok=True)
 plt.savefig("results/metrics.png", dpi=300, bbox_inches='tight')
