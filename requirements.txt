@@ -20,3 +20,4 @@ fire
 matplotlib
 wandb
 fasttext
+jiwer

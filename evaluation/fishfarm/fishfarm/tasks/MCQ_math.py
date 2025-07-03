@@ -96,6 +96,11 @@ class MCQMathTask(Task):
                     },
                 )
             )
+        print(
+            sample_details[0]["output"],
+            sample_details[0]["answer"],
+            sample_details[0]["correct"]
+        )
 
         aggregate_metrics = {"acc": mean(sd["correct"] for sd in sample_details)}
         for lang in self.languages:

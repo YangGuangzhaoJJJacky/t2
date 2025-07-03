@@ -373,7 +373,7 @@ def main(cfg):
             forward(policy, model, base_params, decomposed_params, learnable_params)
             load_hf_params_to_vllm(model.state_dict(), vllm_model.llm)
 
-            train_res = eval_model(vllm_model, train_eval, list(train_ix)[:256])
+            train_res = eval_model(vllm_model, train_eval, list(train_ix)[:cfg.train_val_size])
             valid_res = eval_model(vllm_model, train_eval, valid_ix)
             test_res = eval_model(vllm_model, test_eval)
             if has_transfer_split:

@@ -5,8 +5,8 @@ export PYTHONPATH=$PYTHONPATH:/home/yangguangzhao/t2/evaluation
 
 # ------- 动态读取传入的参数 -------
 NODE=${1:-0}  # 默认值为 0（如果未提供参数）
-TASK="aqua_rat"
-NUM_ITERS=4
+TASK="stt"
+NUM_ITERS=400
 
 # ------- 找 checkpoint -------
 MATCHED_CKPT=$(ls results/$NODE/*/policy_params.pt 2>/dev/null | head -n 1)
@@ -22,6 +22,7 @@ CUDA_VISIBLE_DEVICES=0,1  python svd_reinforce_hydra.py \
     base_model@_global_=qwen306b \
     task@_global_=$TASK \
     mode@_global_=training \
+    optimization@_global_=reinforce_embedding \
     task_loader.node=$NODE \
     +output_path="results/$NODE" \
     num_iters=$NUM_ITERS \

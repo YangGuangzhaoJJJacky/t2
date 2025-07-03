@@ -6,3 +6,4 @@ from .math import MathTask
 from .mbpp2 import Mbpp2Task
 from .iot import IotTask
 from .aqua_rat import AquaRatTask
+from .stt import STTTask

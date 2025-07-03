@@ -1,12 +1,14 @@
 import copy
 import dataclasses
 from typing import Any, Iterable, Optional, Sequence
+from torch import Tensor
+from tqdm import tqdm
 
 from fishfarm.models.base import NLLRequest, NLLResult
 from transformers import PreTrainedTokenizerBase
 
 from ..imports import try_import
-from .base import GenerationRequest, GenerationResult, Message, Model
+from .base import GenerationRequest, GenerationResult, GenerationResultEmbedding, Message, Model
 from .tokenization_utils import tokenize_messages
 
 with try_import() as _imports:
@@ -22,10 +24,14 @@ class VLLMModel(Model):
         llm: vllm.LLM,
         sampling_params: vllm.SamplingParams,
         chat_template: Optional[str],
+        audio_to_embedding_model: None,
     ) -> None:
         self.llm = llm
         self.chat_template = chat_template
         self.sampling_params = sampling_params
+        if audio_to_embedding_model:
+            print("✅ get audio_to_embedding_model")
+            self.audio_to_embedding_model = audio_to_embedding_model
 
     def get_tokenizer(self) -> PreTrainedTokenizerBase:
         tokenizer = self.llm.get_tokenizer()
@@ -108,6 +114,25 @@ class VLLMModel(Model):
         for request, completion in zip(requests, completions):
             yield GenerationResult(
                 request=request, generation=completion.outputs[0].text
+            )
+    
+    def generate_with_embedding(
+        self, requests
+    ) -> Iterable[GenerationResult]:
+        print("🔄 Generating input embeddings...")
+        embedding_prompts = []
+
+        for request in tqdm(requests, desc="Embedding"):
+            embed = self.audio_to_embedding_model.get_input_embeddings(request.audio, request.sr)
+            embedding_prompts.append({"prompt_embeds": embed})
+        completions = self.llm.generate(
+            prompts=embedding_prompts,
+            sampling_params=self.sampling_params,
+        )
+
+        for embedding_prompt, completion in zip(embedding_prompts, completions):
+            yield GenerationResultEmbedding(
+                embedding_prompt=embedding_prompt["prompt_embeds"], generation=completion.outputs[0].text
             )
 
     def nll(self, requests: Sequence[NLLRequest]) -> Iterable[NLLResult]:

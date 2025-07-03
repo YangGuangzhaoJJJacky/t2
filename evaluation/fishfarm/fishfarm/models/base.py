@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterable, Literal, Optional, Sequence
+from typing import Iterable, Literal, Optional, Sequence, Dict
 
 Role = Literal["system", "user", "assistant", "assistant_prefill"]
 
@@ -28,6 +28,10 @@ class GenerationResult:
     request: GenerationRequest
     generation: str
 
+@dataclass
+class GenerationResultEmbedding:
+    embedding_prompt: Dict
+    generation: str
 
 @dataclass
 class NLLRequest:

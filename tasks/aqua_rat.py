@@ -42,7 +42,7 @@ class AquaRatTask(Task):
     def get_train_data(self):
         print(f"#############current node {self.node} ###########")
         train_data = load_dataset("yangguangzhaojjj/aqua_rat", split=f"subset_{self.node}")
-        train_data = train_data.select(range(5000))
+        train_data = train_data.select(range(1000))
         train_size = len(train_data)
         train_ix = range(0, train_size-256)
         valid_ix = range(train_size-256, train_size)

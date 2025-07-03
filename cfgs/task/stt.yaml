@@ -1,0 +1,5 @@
+task_name: stt
+node: 0
+task_loader:
+  _target_: tasks.STTTask
+  node: ${node}

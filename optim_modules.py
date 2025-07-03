@@ -209,6 +209,174 @@ class Reinforce(OptimizationAlgorithm, nn.Module):
             kl_div = metrics_dict["kl_div"]
             print(f"kl_div={kl_div}")
 
+class Reinforce_embedding(OptimizationAlgorithm, nn.Module):
+    def __init__(
+        self, policy, gpu, max_grad_norm, lr, rw_norm, rw_clip, kl_ref_coeff, **kwargs
+    ):
+        nn.Module.__init__(self=self)
+        self.gpu = gpu
+        self.kl_ref_coeff = kl_ref_coeff
+        self.use_kl_loss = kl_ref_coeff > 0.0
+        self.max_grad_norm = float(max_grad_norm)
+        self.lr = lr
+        self.rw_norm = rw_norm
+        self.rw_clip = rw_clip
+        self.optimizer = torch.optim.Adam(policy.trainable_params, lr=lr)
+
+    def compute_ref_logprobs(
+        self,
+        model,
+        tokenizer,
+        res,
+    ):
+        ref_log_probs_list = []
+        print("Computing reference log probs...")
+
+        for sample in res.sample_details:
+            output_text = sample["output"]
+            prompt_embeds = sample["prompt_embeds"].to(self.gpu).unsqueeze(0).to(dtype=torch.bfloat16)  # [1, P, D]
+    
+            # 1. embed output text
+            output_ids = tokenizer(output_text, return_tensors="pt").input_ids.to(self.gpu)  
+            output_embeds = model.get_input_embeddings()(output_ids)            
+
+            # 2. cat full input
+            full_input_embeds = torch.cat([prompt_embeds, output_embeds], dim=1)            
+            attn_mask = torch.ones(full_input_embeds.shape[:-1], dtype=torch.long).to(self.gpu)
+
+            # 3. Forward
+            outputs = model(inputs_embeds=full_input_embeds, attention_mask=attn_mask)
+            prompt_len = prompt_embeds.shape[1]
+            logits = outputs.logits[:, prompt_len - 1 : -1]
+            log_probs = torch.nn.functional.log_softmax(logits, dim=-1)
+
+            ref_log_probs_list.append(log_probs.detach().cpu())
+
+        return ref_log_probs_list
+
+    def get_rewards(self, task_loader, res):
+        rw_norm = self.rw_norm
+        rw_clip = self.rw_clip
+        rewards = task_loader.get_rewards(res=res)
+
+        if rw_norm:
+            rewards = np.array(rewards)
+            mean_rw = np.mean(rewards)
+            std_rw = np.clip(np.std(rewards), a_min=1e-7, a_max=None)
+            rewards = (rewards - mean_rw) / std_rw
+        if rw_clip is not None:
+            if rw_clip > 0:
+                rewards = np.array(rewards)
+                rewards = np.clip(rewards, a_min=-rw_clip, a_max=rw_clip)
+        return rewards
+ 
+    def step_optimization(
+        self,
+        model_id,
+        model,
+        tokenizer,
+        policy,
+        task_loader,
+        batch_ix,
+        train_data,
+        train_eval,
+        base_params,
+        decomposed_params,
+        original_model_params,
+        metrics_to_log,
+        vllm_model=None,
+        **kwargs,
+    ):
+        use_kl_loss = self.use_kl_loss
+        kl_ref_coeff = self.kl_ref_coeff
+
+        gpu = self.gpu
+
+        learnable_params = policy.get_learnable_params()
+        new_params = forward(
+            policy, model, base_params, decomposed_params, learnable_params
+        )
+
+        print("Loading weights and getting completions with VLLM")
+        load_hf_params_to_vllm(new_params, vllm_model.llm)
+        res = eval_model(vllm_model, train_eval, batch_ix)
+        clipped_batch_size = clipped_batch_size = len(res.sample_details)
+        rewards = self.get_rewards(task_loader=task_loader, res=res)
+
+        rw_stats = get_mean_std_max_min_dict(array=rewards, prefix="rewards")
+        metrics_to_log.update(**rw_stats)
+
+        if use_kl_loss:
+            with torch.no_grad():
+                load_base_params(model=model, base_params=original_model_params)
+                ref_log_probs_list = self.compute_ref_logprobs(
+                    model=model,
+                    tokenizer=tokenizer,
+                    res=res,
+                )
+                new_params = forward(
+                    policy, model, base_params, decomposed_params, learnable_params
+                )
+
+        print("Computing the policy gradient...")
+        for j, sample in enumerate(res.sample_details):
+            output_text = sample["output"]
+            prompt_embeds = sample["prompt_embeds"].to(self.gpu).unsqueeze(0).to(dtype=torch.bfloat16)  # [1, P, D]
+    
+            # 1. embed output text
+            output_ids = tokenizer(output_text, return_tensors="pt").input_ids.to(self.gpu)  
+            output_embeds = model.get_input_embeddings()(output_ids)            
+
+            # 2. cat full input
+            full_input_embeds = torch.cat([prompt_embeds, output_embeds], dim=1)            
+            attn_mask = torch.ones(full_input_embeds.shape[:-1], dtype=torch.long).to(self.gpu)
+
+            # 3. Forward
+            outputs = model(inputs_embeds=full_input_embeds, attention_mask=attn_mask)
+            prompt_len = prompt_embeds.shape[1]
+            logits = outputs.logits[:, prompt_len - 1 : -1]
+            log_probs = torch.nn.functional.log_softmax(logits, dim=-1)
+            ce_loss = F.cross_entropy(
+                logits.view(-1, logits.size(-1)),           # [B*T, V]
+                output_ids.view(-1),                        # [B*T]
+                reduction="mean"
+            )
+            loss = ce_loss
+
+
+            if use_kl_loss:
+                ref_log_probs = ref_log_probs_list[j].to(gpu)
+                kl_div = F.kl_div(
+                    input=log_probs,
+                    target=ref_log_probs,
+                    log_target=True,
+                    reduction="sum",
+                )
+                loss = loss + kl_ref_coeff * kl_div
+            scaled_loss = loss / clipped_batch_size
+            scaled_loss.backward()
+            log_dict = {
+                "loss": loss.item(),
+            }
+            if use_kl_loss:
+                log_dict["kl_div"] = kl_div.item()
+            metrics_to_log.update(**log_dict)
+        backward(policy, model, base_params, decomposed_params, learnable_params)
+
+    def update(self, policy):
+        max_grad_norm = self.max_grad_norm
+        torch.nn.utils.clip_grad_norm_(policy.trainable_params, max_grad_norm)
+        self.optimizer.step()
+        self.optimizer.zero_grad()
+
+    def log_optim(self, metrics_to_log):
+        metrics_dict = metrics_to_log.get()
+        loss = metrics_dict["loss"]
+        print(f"Loss={loss}")
+        if self.use_kl_loss:
+            kl_div = metrics_dict["kl_div"]
+            print(f"kl_div={kl_div}")
+
 
 class RandomShooting(OptimizationAlgorithm, nn.Module):
     def __init__(

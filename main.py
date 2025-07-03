@@ -3,13 +3,28 @@ import os
 from typing import List
 
 def train(node_id):
-    print(f"🧠 Node {node_id} is training...")
-    result = subprocess.run(["bash", "scripts/train_task_expert.sh", str(node_id)])
-    if result.returncode != 0:
-        print(f"❌ Node {node_id} training failed.")
-        print(result.stderr.decode())
-    else:
-        print(f"✅ Node {node_id} finished training.")
+    print(f"\n🧠 Node {node_id} is training...")
+
+    try:
+        result = subprocess.run(
+            ["bash", "scripts/train_task_expert.sh", str(node_id)],
+        )
+
+        if result.returncode != 0:
+            print(f"❌ Node {node_id} training failed.")
+            if result.stderr:
+                try:
+                    last_line = result.stderr.decode(errors="ignore").strip().splitlines()[-1]
+                    print(f"  └─ Error: {last_line}")
+                except Exception as decode_err:
+                    print(f"  └─ stderr decoding failed: {decode_err}")
+            else:
+                print("  └─ No stderr captured.")
+        else:
+            print(f"✅ Node {node_id} finished training.")
+
+    except Exception as e:
+        print(f"❌ Node {node_id} crashed with unexpected error: {e}")
 
 def load_state_dicts(n_nodes):
     return [torch.load(sorted(glob.glob(f"results/{n}/*/policy_params.pt"))[-1]) for n in range(n_nodes)]

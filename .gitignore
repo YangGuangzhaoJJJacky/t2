@@ -10,3 +10,5 @@ messy_scripts
 **/__pycache__/
 dataset
 models
+slam-asr/*.wav
+.env
