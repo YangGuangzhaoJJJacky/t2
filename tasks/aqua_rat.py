@@ -41,7 +41,7 @@ class AquaRatTask(Task):
 
     def get_train_data(self):
         print(f"#############current node {self.node} ###########")
-        train_data = load_dataset("yangguangzhaojjj/aqua_rat", split=f"subset_{self.node}")
+        train_data = load_dataset("yangguangzhaojjj/aqua_rat_cls", split=f"cls_{self.node+1}")
         train_data = train_data.select(range(1000))
         train_size = len(train_data)
         train_ix = range(0, train_size-256)
@@ -54,7 +54,7 @@ class AquaRatTask(Task):
 
     def get_evaluator(self) -> Tuple:
         res = []
-        dataset_list = [load_dataset("yangguangzhaojjj/aqua_rat", split=f"subset_{self.node}"),
+        dataset_list = [load_dataset("yangguangzhaojjj/aqua_rat_cls", split=f"cls_{self.node+1}"),
                         load_dataset("deepmind/aqua_rat", "raw", split="test")]
         for dataset in dataset_list:
             samples = []
@@ -119,5 +119,6 @@ class AquaRatTask(Task):
                 repetition_penalty=1.0,
             ),
             chat_template=chat_template,
+            audio_to_embedding_model=None,
         )
         return vllm_model

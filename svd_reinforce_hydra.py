@@ -296,7 +296,11 @@ def main(cfg):
         clipped_batch_size = len(list(train_ix))
     else:
         clipped_batch_size = min(batch_size, len(list(train_ix)))
-    best_val_acc = 0.0
+    # 根据指标类型设置初始值：CER等错误率指标用无穷大，准确率指标用0
+    if hasattr(task_loader, 'target_metric_valid') and task_loader.target_metric_valid == 'cer':
+        best_val_acc = float('inf')  # CER越小越好，初始值设为无穷大
+    else:
+        best_val_acc = 0.0  # 准确率越大越好，初始值设为0
     test_at_best = 0.0
     transfer_at_best = 0.0
     for i in range(num_iters+1):
@@ -378,13 +382,15 @@ def main(cfg):
             test_res = eval_model(vllm_model, test_eval)
             if has_transfer_split:
                 transfer_res = eval_model(vllm_model, transfer_eval)
-            if (
-                valid_res.aggregate_metrics[task_loader.target_metric_valid]
-                > best_val_acc
-            ):
-                best_val_acc = valid_res.aggregate_metrics[
-                    task_loader.target_metric_valid
-                ]
+            current_metric = valid_res.aggregate_metrics[task_loader.target_metric_valid]
+            # for stt task, lower is better
+            if (hasattr(task_loader, 'target_metric_valid') and task_loader.target_metric_valid == 'cer'):
+                metric_improved = current_metric < best_val_acc
+            else:
+                metric_improved = current_metric > best_val_acc
+                
+            if metric_improved:
+                best_val_acc = current_metric
                 test_at_best = test_res.aggregate_metrics[
                     task_loader.target_metric_test
                 ]

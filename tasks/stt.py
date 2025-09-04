@@ -39,8 +39,9 @@ class STTTask(Task):
     def get_train_data(self):
         print(f"#############current node {self.node} ###########")
         # train_data = load_dataset("RecoseleInc/TTS-jp", "filtered_dataset_14-clean", split="train")
-        train_data = load_dataset("japanese-asr/ja_asr.jsut_basic5000", split="test")
-        train_data = train_data.select(range(5000))
+        # train_data = load_dataset("japanese-asr/ja_asr.jsut_basic5000", split="test")
+        train_data = load_dataset("yangguangzhaojjj/travel1000",  split="train")
+        train_data = train_data.select(range(200*self.node, 200*(self.node+1)))
         train_size = len(train_data)
         train_ix = range(0, train_size-128)
         valid_ix = range(train_size-128, train_size)
@@ -52,8 +53,8 @@ class STTTask(Task):
 
     def get_evaluator(self) -> Tuple:
         res = []
-        dataset_list = [load_dataset("japanese-asr/ja_asr.jsut_basic5000", split="test"),
-                        load_dataset("japanese-asr/ja_asr.jsut_basic5000", split="test").select(range(128))]
+        dataset_list = [load_dataset("yangguangzhaojjj/travel1000", split="train"),
+                        load_dataset("yangguangzhaojjj/travel1000", split="train").select(range(800,1000))]
         for dataset in dataset_list:
             samples = []
             for sample in dataset:

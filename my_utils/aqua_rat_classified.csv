@@ -1,0 +1,48 @@
+question,options,rationale,correct,cls
+"If x, y, and z are positive integers such that x is divisible by y, and y is divisible by z, which of the following is NOT necessarily an integer?","['A)xy/z', 'B)(x + y)/z', 'C)xz/y', 'D)(x - y)/z', 'E)(x + z)/y']","As per the question, let x = 12, y = 6, and z = 2. Plugging these into the answer choices, only E does not yield an integer. The reason is that (x + z)/y = x/y + z/y, and while x/y must be an integer, z/y is only an integer if y = z.",E,2
+"The cross-section of a stream is a trapezium in shape. If the stream is 10 m wide at the top and the area of cross-section is 640 sq m, the depth of stream is 80m and width at the bottom is?","['A)2 m', 'B)6 m', 'C)4 m', 'D)8 m', 'E)9 m']","1/2 * 80 (10 + b) = 640
+b = 6m
+ANSWER:B",B,6
+Evaluate: 6402.5 + 640.25 + 64.025 + 6.4025 + 0.64025,"['A)6819.59775', 'B)6981.59775', 'C)6918.59775', 'D)7113.81775', 'E)6891.59775']","6402.5
+640.25
+64.025
+6.4025
++ 0.64025
+---------------
+7113.81775
+Answer is D.",D,3
+"Jack, Jill, and Sandy each have one try to make a basket from half court. If their individual probabilities of making the basket are 1/6, 1/7, and 1/8 respectively, what is the probability that all three will miss?","['A)3/8', 'B)5/8', 'C)7/16', 'D)9/16', 'E)23/32']","The probability that all three will miss is 5/6*6/7*7/8=5/8.
+The answer is B.",B,1
+How many positive 5-digit integers have the odd sum W of their digits?,"['A)9*10^2', 'B)9*10^3', 'C)10^4', 'D)45*10^3', 'E)9*10^4']","We are looking at numbers between 10000 and 99999 both inclusive.
+There are 90000 numbers.
+Now for
+10000 : sum of digits is odd;
+10001 :sum of digits is even;
+10002 : sum of digits is odd ; so on and so forth. So every alternate number is such that the sum of digit is odd.
+(Exception for the above statement :
+When it is 10009 the sum is even and for 10010 again the sum is even; But if you look at 10019 :sum is odd; 10020 : sum is odd
+and this pattern continues so basically the number of odd sum of digits and even sum of digits are equal)
+This means exactly half of the numbers will have odd sum W of their digits. i.e 45000
+Answer :D",D,2
+If the sides of a cube are in the ratio 4:3. What is the ratio of their diagonals?,"['A)4:3', 'B)4:0', 'C)4:5', 'D)4:7', 'E)4:2']","Explanation:
+a1:a2 = 4:3
+d1:d2 = 4:3
+Answer: Option A",A,6
+"The manager of a produce market purchased a quantity of tomatoes for $0.80 per pound. Due to improper handling, 10 percent of the tomatoes, by weight, were ruined and discarded. At what price per pound should the manager sell the remaining tomatoes if she wishes to make a profit on the sale of the tomatoes equal to 10 percent of the cost of the tomatoes.","['A)$0.94', 'B)$0.96', 'C)$0.98', 'D)$1.00', 'E)$1.20']","Assume the manager bought 100 tomatoes.
+Cost Price = 80
+Given: 10% are damaged --> Available tomatoes to sell = 90
+90 * x - 80 = 0.1 * 80
+90x - 80 = 8
+90x = 88
+x = 88/90 = 44/45 = 0.977
+x is slightly under 0.977= 0.98
+Answer: C",C,4
+From 6 officers and 10 clerks in how many can 5 be chosen to include exactly one officer?,"['A)1452', 'B)1562', 'C)2456', 'D)1260', 'E)660']","Required number of ways = 6C1 * 10C4 = 1260
+Answer is D",D,1
+"A person earns 15% on investment but loses 10% on another investment. If the ratio of the two investments be 3:5, what is the gain or loss on the two investments taken together?","['A)0.63 %', 'B)0.64 %', 'C)0.65 %', 'D)0.66 %', 'E)None']","Sol.
+Suppose he invested 300 & 500 respectively profit : 15% of 300 = 45 loss =
+500 *10 = 50 net loss = - 5 5/800 *100 = 0.63 %
+Answer A",A,4
+A and B invests Rs.3000 and Rs.5500 respectively in a business. If A doubles his capital after 6 months. In what ratio should A and B divide that year's profit?,"['A)8:8', 'B)9:8', 'C)9:7', 'D)9:5', 'E)9:11']","(3*6 + 6*6): (5.5*12)
+54:66 => 9:11
+Answer: E",E,4
