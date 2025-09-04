@@ -12,3 +12,4 @@ dataset
 models
 slam-asr/*.wav
 .env
+results_*/
