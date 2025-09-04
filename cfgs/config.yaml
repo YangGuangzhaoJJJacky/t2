@@ -6,8 +6,8 @@ defaults:
   - optimization@_global_: reinforce
   - mode@_global_: training
 
-num_iters: 2000
-test_interval: 10
+num_iters: 50
+test_interval: 5
 lr: 3e-4
 batch_size: 32
 train_val_size: 128

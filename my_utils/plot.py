@@ -40,7 +40,7 @@ print(df)
 
 metrics = [
     "train_acc", "test_acc", "valid_acc", "best_val_acc", "test_at_best_val",
-    "rewards/mean", "rewards/std", "pg", "loss", "kl_div"
+    "rewards/mean", "rewards/std",  "loss", "kl_div"
 ]
 
 plt.figure(figsize=(18, 12))

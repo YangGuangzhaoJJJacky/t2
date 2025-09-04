@@ -1,0 +1,52 @@
+num_iters: 400
+test_interval: 10
+lr: 0.002
+batch_size: 32
+train_val_size: 128
+seed: 42
+init_val: 0.1
+test_only: false
+model_dir: null
+save_legacy_params: false
+use_lora: false
+prompt_based_eval: false
+experts_path_dict: null
+run_name: null
+load_ckpt: results/0/aqua_rat_1_mm1_qwen306b_RL-lr0.002-mGN0.001-klC0.01-rrN0CNone-st/policy_params.pt
+exp_suffix: st
+exp_name: ${base_model_name}/${optim_name}-${exp_suffix}
+wandb_log: true
+wandb_project: shakeoff
+wandb_group_name: ${exp_name}
+extract_svd: false
+out_dir: results
+shakeoff_policy:
+  _target_: policy.Policy
+  init_val: ${init_val}
+  mode: ${policy_mode}
+  max_mult: ${max_mult}
+policy_mode: 1
+max_mult: 1
+policy_name: ${policy_mode}_mm${max_mult}
+task_name: aqua_rat
+node: 0
+task_loader:
+  _target_: tasks.AquaRatTask
+  node: 0
+base_model:
+  _target_: base_model.Qwen306B
+base_model_name: qwen306b
+optimization_algorithm:
+  _target_: optim_modules.Reinforce
+  max_grad_norm: ${max_grad_norm}
+  lr: ${lr}
+  rw_norm: ${rw_norm}
+  rw_clip: ${rw_clip}
+  kl_ref_coeff: ${kl_ref_coeff}
+max_grad_norm: 0.001
+rw_norm: 0
+rw_clip: null
+kl_ref_coeff: 0.01
+rw_strategy: rN${rw_norm}C${rw_clip}
+optim_name: RL-lr${lr}-mGN${max_grad_norm}-klC${kl_ref_coeff}-r${rw_strategy}
+output_path: results/0

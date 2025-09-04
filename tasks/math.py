@@ -111,5 +111,6 @@ class MathTask(Task):
                 repetition_penalty=1.0,
             ),
             chat_template=chat_template,
+            audio_to_embedding_model=None,
         )
         return vllm_model

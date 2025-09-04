@@ -81,4 +81,5 @@ def federated_multi_exchange(contact_path, fl_coeff=0.5):
         print(f"✅ Exchange {iter_no + 1} completed and saved.\n")
 
 if __name__ == "__main__":
+    # federated_multi_exchange("contact_pattern/cse_n10_c10_b02_tt05_tp2_s01.json")
     federated_multi_exchange("contact_pattern/example.json")
