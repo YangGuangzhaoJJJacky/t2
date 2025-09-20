@@ -1,5 +1,7 @@
 task_name: stt
 node: 0
+train_layers: "self_attn"  # 🔥 控制训练层: "mlp", "self_attn", "both"
 task_loader:
   _target_: tasks.STTTask
   node: ${node}
+  train_layers: ${train_layers}

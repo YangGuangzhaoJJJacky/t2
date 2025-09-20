@@ -300,7 +300,7 @@ class Reinforce_embedding(OptimizationAlgorithm, nn.Module):
         print("Loading weights and getting completions with VLLM")
         load_hf_params_to_vllm(new_params, vllm_model.llm)
         res = eval_model(vllm_model, train_eval, batch_ix)
-        clipped_batch_size = clipped_batch_size = len(res.sample_details)
+        clipped_batch_size = len(res.sample_details)  
         rewards = self.get_rewards(task_loader=task_loader, res=res)
 
         rw_stats = get_mean_std_max_min_dict(array=rewards, prefix="rewards")

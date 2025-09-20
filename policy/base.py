@@ -10,15 +10,17 @@ def get_soft_mask(n, fraction):
 
 
 class Policy(nn.Module):
-    def __init__(self, base_params, gpu, init_val, max_mult=1, **kwargs):
+    def __init__(self, base_params, gpu, init_val, max_mult=1, train_layers="mlp", **kwargs):
         # Create learnable parameters.
         super().__init__()
         self.learnable_params = {}
         self.num_params = 0
         self.max_mult = max_mult
+        # 🔥 控制训练哪些层: "mlp", "self_attn", "both"
+        self.train_layers = train_layers
         for k, v in base_params.items():
             # each param initialized with small gaussian noise
-            if "mlp" in k:
+            if self._should_train_layer(k):
                 self.learnable_params[k] = torch.nn.Parameter(
                     data=(
                         torch.randn(
@@ -36,6 +38,20 @@ class Policy(nn.Module):
         self.learnable_params_list = list(self.learnable_params.values())
         self.trainable_params = self.learnable_params_list
         self.learnable_params_module_list = nn.ParameterList(self.learnable_params_list)
+
+    def _should_train_layer(self, layer_name):
+        """判断是否应该训练指定层"""
+        if "norm" in layer_name:
+            return False
+            
+        if self.train_layers == "mlp":
+            return "mlp" in layer_name
+        elif self.train_layers == "self_attn":
+            return "self_attn" in layer_name
+        elif self.train_layers == "both":
+            return "mlp" in layer_name or "self_attn" in layer_name
+        else:
+            return False
 
     def get_learnable_params(self, detach=False):
         return self.learnable_params

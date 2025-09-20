@@ -120,7 +120,7 @@ def forward(policy, model, base_params, decomposed_params, learnable_params):
     """Forward pass."""
     new_params = {}
     for k in base_params:
-        if "mlp" in k:
+        if policy._should_train_layer(k):
             new_params[k] = compose_new_params(
                 policy, k, decomposed_params, learnable_params
             )
@@ -136,7 +136,7 @@ def load_base_params(
     base_params,
 ):
     for k in base_params:
-        if "mlp" in k:
+        if "mlp" in k or "self_attn" in k:
             model.get_parameter(k).copy_(base_params[k].cuda())
 
 
@@ -148,7 +148,7 @@ def backward(
     learnable_params,
 ):
     """Backward pass."""
-    keys_to_backprop = [k for k in base_params if "mlp" in k]
+    keys_to_backprop = [k for k in base_params if policy._should_train_layer(k)]
     last_key = keys_to_backprop[-1]
     for k in keys_to_backprop[:-1]:
         compose_new_params(policy, k, decomposed_params, learnable_params).backward(

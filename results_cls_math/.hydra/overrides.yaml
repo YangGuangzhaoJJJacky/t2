@@ -1,8 +1,0 @@
-- base_model@_global_=qwen306b
-- task@_global_=aqua_rat
-- mode@_global_=training
-- optimization@_global_=reinforce
-- task_loader.node=2
-- +output_path=results/2
-- num_iters=3
-- load_ckpt=results/2/aqua_rat_1_mm1_qwen306b_RL-lr0.002-mGN0.001-klC0.01-rrN0CNone-st/policy_params.pt

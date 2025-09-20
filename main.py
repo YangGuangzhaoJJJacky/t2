@@ -82,4 +82,6 @@ def federated_multi_exchange(contact_path, fl_coeff=0.5):
 
 if __name__ == "__main__":
     # federated_multi_exchange("contact_pattern/cse_n10_c10_b02_tt05_tp2_s01.json")
-    federated_multi_exchange("contact_pattern/example.json")
+    federated_multi_exchange("contact_pattern/rwp_n10_a0500_r100_p1_s10.json")
+    # federated_multi_exchange("contact_pattern/example.json")
+    # federated_multi_exchange("contact_pattern/zero.json")
