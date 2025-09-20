@@ -1,6 +1,6 @@
+task_name: cls
+node: 0
 task_loader:
   _target_: tasks.ClsTask
-
-
-task_name: Cls
+  node: ${node}
   

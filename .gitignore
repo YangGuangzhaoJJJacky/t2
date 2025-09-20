@@ -13,3 +13,4 @@ models
 slam-asr/*.wav
 .env
 results_*/
+results_history

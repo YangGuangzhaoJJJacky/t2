@@ -134,8 +134,22 @@ def main(cfg):
     tokenizer = AutoTokenizer.from_pretrained(model_id)
     base_params = model.state_dict()
 
+    train_layers = getattr(task_loader, 'train_layers', 'both')
+    def should_train_layer(layer_name):
+        if "norm" in layer_name:
+            return False
+            
+        if train_layers == "mlp":
+            return "mlp" in layer_name
+        elif train_layers == "self_attn":
+            return "self_attn" in layer_name
+        elif train_layers == "both":
+            return "mlp" in layer_name or "self_attn" in layer_name
+        else:
+            return False
+    
     original_model_params = {
-        k: v.clone().detach().cpu() for k, v in base_params.items() if "mlp" in k
+        k: v.clone().detach().cpu() for k, v in base_params.items() if should_train_layer(k)
     }
 
     # Load decomposed parameters.
@@ -171,6 +185,7 @@ def main(cfg):
         base_params=base_params,
         decomposed_params=decomposed_params,
         gpu=gpu,
+        train_layers=train_layers,  # 🔥 传递训练层配置
     )
  
     optimization_algorithm: OptimizationAlgorithm = hydra.utils.instantiate(

@@ -22,7 +22,7 @@ print("✅ Logged in as:", whoami()["name"])
 
 class STTTask(Task):
     def __init__(
-        self, node=0
+        self, node=0, train_layers="self_attn"
     ):  
         self.target_metric_train = "cer"
         self.target_metric_valid = self.target_metric_train
@@ -31,6 +31,7 @@ class STTTask(Task):
         self.has_transfer_split = False
         self.has_training_split = True
         self.node = node
+        self.train_layers = train_layers
          # build audio_to_embedding_model
         self.audio_to_embedding_model = AudioToEmbedding()
         self.audio_to_embedding_model.load_checkpoint()
@@ -53,7 +54,13 @@ class STTTask(Task):
 
     def get_evaluator(self) -> Tuple:
         res = []
-        dataset_list = [load_dataset("yangguangzhaojjj/travel1000", split="train"),
+        # 🔥 修复：每个节点使用自己的数据子集进行评估
+        train_dataset = load_dataset("yangguangzhaojjj/travel1000", split="train")
+        node_data = train_dataset.select(range(200*self.node, 200*(self.node+1)))
+        
+        # 第一个evaluator：节点自己的数据子集（用于train/valid评估）
+        # 第二个evaluator：固定测试集（用于test评估）
+        dataset_list = [node_data,
                         load_dataset("yangguangzhaojjj/travel1000", split="train").select(range(800,1000))]
         for dataset in dataset_list:
             samples = []

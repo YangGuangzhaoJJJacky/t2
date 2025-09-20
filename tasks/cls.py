@@ -7,7 +7,7 @@ import fishfarm
 import vllm
 from fishfarm.models.vllm_model import VLLMModel
 from fishfarm.tasks.base import TaskResult
-from fishfarm.tasks.evalplus import load_dataset
+from datasets import load_dataset
 
 from .base import Task, get_download_dir
 
@@ -35,7 +35,7 @@ class CategorySample:
     label: str
 
 
-class CategoryClassficiationTask(fishfarm.tasks.base.Task):
+class CategoryClassificationTask(fishfarm.tasks.base.Task):
     def __init__(
         self,
         samples,
@@ -78,6 +78,16 @@ class CategoryClassficiationTask(fishfarm.tasks.base.Task):
                 )
             )
 
+        # 打印调试信息 - 显示第一个样本的详细结果
+        if sample_details:
+            first_sample = sample_details[0]
+            print(f"question  : {first_sample['question'][:200]}...")
+            print(f"label  : {first_sample['label']}")
+            print(f"output  : {first_sample['output']}")
+            print(f"prediction  : {first_sample['prediction']}")
+            print(f"correct  : {first_sample['correct']}")
+            
+
         aggregate_metrics = {
             "acc": mean(
                 float(sd["correct"]) if isinstance(sd["correct"], (bool)) else 0.0
@@ -90,35 +100,31 @@ class CategoryClassficiationTask(fishfarm.tasks.base.Task):
 
 
 class ClsTask(Task):
-    def __init__(self):
+    def __init__(self, node=0):
+        
+        self.node = node
         self.model_to_template = {
-            "meta-llama/Meta-Llama-3-8B-Instruct": (
+            "models/Qwen3-0.6B": (
                 "{% set loop_messages = messages %}"
                 "{% for message in loop_messages %}"
-                "{% set content = '<|start_header_id|>' + message['role'] + '<|end_header_id|>"
-                "\n\n'+ message['content'] | trim + '<|eot_id|>' %}"
-                "{% if loop.index0 == 0 %}{% set content = bos_token + content %}"
-                "{% endif %}"
-                "{{ content }}"
+                "{{ '<|im_start|>' + message['role'] + '\\n' + message['content'] | trim + '<|im_end|>' }}"
                 "{% endfor %}"
                 "{% if add_generation_prompt %}"
-                "{{ '<|start_header_id|>assistant<|end_header_id|>\n\n' }}"
+                "{{ '<|im_start|>assistant\\n' }}"
                 "{% endif %}"
-            ),
-            "mistralai/Mistral-7B-Instruct-v0.3": None,
+                "<think>\n\n</think>\n\n"
+            )
         }
-        self.system_msg = """
-    # Analyze the given question and classify it into one of four categories: 'code', 'math', 'reasoning' or 'other'. Follow these guidelines:
+        with open("my_utils/cls.txt", "r") as f:
+            self.system_msg = f.read()
 
-    1. Code: Questions asking for programming solutions, functions, algorithms. Often includes specific programming terms, language syntax, or data structures.
-    2. Math: Questions involving mathematical calculations, formulas, statistics. Often includes numbers, equations, or mathematical operations.
-    3. Reasoning: Questions requiring logical thinking, application of scientific knowledge, or critical analysis of information. Often presents statements that need evaluation based on general understanding. 
-    4. Other: Questions not clearly fit into above categories.
+        self.system_msg += """
+    # Analyze the given question and classify it into one of 10 categories as I mentioned above. 
 
     Instructions:
-    - Consider the primary focus, skills, and knowledge required to answer the question.
     - If a question spans multiple categories, choose the most dominant one.
-    - Provide your final classification within \\boxed{} notation. Example: \\boxed{reasoning}
+    - DONOT calculate the question, just classify it.
+    - Provide your final classification NUMBER within \\boxed{} notation. Example: \\boxed{1}
 
     Format your response as follows:
     Classification: \\boxed{category}
@@ -131,70 +137,41 @@ class ClsTask(Task):
         self.has_training_split = True
         self.num_samples_per_task = 400  # Hard code 400 samples per task
         self.task_datasets = [
-            datasets.load_dataset("gsm8k", "main", split="test"),
-            load_dataset(source_dataset="mbpp"),
-            datasets.load_dataset("allenai/ai2_arc", "ARC-Challenge", split="test"),
+            load_dataset("yangguangzhaojjj/aqua_rat_cls", split=f"cls_{self.node+1}").select(range(1000)),  # train dataset
+            load_dataset("yangguangzhaojjj/aqua_rat_cls", split="test")  # test dataset
         ]
-        self.train_samples, self.test_samples = self.build_samples()
+        
+        # 加载数据并转换为CategorySample格式
+        self.train_samples, self.test_samples = self._load_and_prepare_data()
 
-    def split_samples(self, samples):
-        """Split samples into train and test sets with rate 4 : 1."""
+    def _load_and_prepare_data(self):
+        """加载数据集并转换为CategorySample格式"""
+        train_dataset = self.task_datasets[0]
+        test_dataset = self.task_datasets[1]
+        
+        # 转换训练数据
         train_samples = []
+        for item in train_dataset:
+            question = item['question'] + "\nOptions:\n" + "\n".join(item['options'])
+            label = str(item['cls'])  # 确保label是字符串格式
+            train_samples.append(CategorySample(question=question, label=label))
+        
+        # 转换测试数据
         test_samples = []
-        for i, sample in enumerate(samples):
-            if i % 5 < 4:
-                train_samples.append(sample)
-            else:
-                test_samples.append(sample)
+        for item in test_dataset:
+            question = item['question'] + "\nOptions:\n" + "\n".join(item['options'])
+            label = str(item['cls'])  # 确保label是字符串格式
+            test_samples.append(CategorySample(question=question, label=label))
+        
         return train_samples, test_samples
 
-    def get_train_data(self=400):
-        train_ix = range(0, len(self.train_samples), 2)
-        valid_ix = range(1, len(self.train_samples), 2)
+    def get_train_data(self, num_samples=400):
+        print(f"#############current node {self.node} ###########")
+        train_size = len(self.train_samples)
+        train_ix = range(0, train_size-256)
+        valid_ix = range(train_size-256, train_size)
 
         return self.train_samples, train_ix, valid_ix
-
-    def build_samples(self):
-        task_labels = ["math", "code", "reasoning"]
-
-        samples = []
-        choices = ["A", "B", "C", "D", "E"]
-        for dataset, label in zip(self.task_datasets, task_labels):
-            counter = 0
-            for sample in dataset:
-                counter += 1
-                if counter >= self.num_samples_per_task:
-                    break
-                if label == "math":
-                    samples.append(
-                        CategorySample(
-                            question=sample["question"],
-                            label="math",
-                        )
-                    )
-                elif label == "code":
-                    samples.append(
-                        CategorySample(
-                            question=sample.instruction,
-                            label="code",
-                        )
-                    )
-                else:  # reasoning
-                    question = sample["question"] + "\n"
-                    question += "Options:\n"
-                    options = []
-                    for opt in sample["choices"]["text"]:
-                        options.append(opt)
-                    for i, opt in enumerate(options):
-                        question += "{}. {}\n".format(choices[i], opt)
-                    samples.append(
-                        CategorySample(
-                            question=question,
-                            label="reasoning",
-                        )
-                    )
-
-        return self.split_samples(samples)
 
     def get_rewards(self, res):
         rewards = [1.0 if x["correct"] else -1.0 for x in res.sample_details]
@@ -205,7 +182,7 @@ class ClsTask(Task):
         res = []
         for samples in [self.train_samples, self.test_samples]:
             res.append(
-                CategoryClassficiationTask(
+                CategoryClassificationTask(
                     samples=samples,
                     context_messages=[
                         fishfarm.Message("system", self.system_msg),
@@ -234,7 +211,7 @@ class ClsTask(Task):
             max_model_len=2048,
             gpu_memory_utilization=0.8,
             enforce_eager=True,
-            dtype="bfloat16",
+            dtype="float16",
             download_dir=get_download_dir(),
         )
         chat_template = self.model_to_template[model_id]
@@ -252,5 +229,6 @@ class ClsTask(Task):
                 repetition_penalty=1.0,
             ),
             chat_template=chat_template,
+            audio_to_embedding_model=None,
         )
         return vllm_model
