@@ -1,0 +1,114 @@
+[
+  {
+    "node": 0,
+    "cls": 0,
+    "test_acc": 0.64453125,
+    "status": "success",
+    "timestamp": "2025-09-27T16:24:02.115635"
+  },
+  {
+    "node": 0,
+    "cls": 1,
+    "test_acc": 0.59375,
+    "status": "success",
+    "timestamp": "2025-09-27T16:26:56.694263"
+  },
+  {
+    "node": 0,
+    "cls": 2,
+    "test_acc": 0.6328125,
+    "status": "success",
+    "timestamp": "2025-09-27T16:29:55.594516"
+  },
+  {
+    "node": 0,
+    "cls": 3,
+    "test_acc": 0.6015625,
+    "status": "success",
+    "timestamp": "2025-09-27T16:34:25.783138"
+  },
+  {
+    "node": 0,
+    "cls": 4,
+    "test_acc": 0.56640625,
+    "status": "success",
+    "timestamp": "2025-09-27T16:39:49.119807"
+  },
+  {
+    "node": 0,
+    "cls": 5,
+    "test_acc": 0.59765625,
+    "status": "success",
+    "timestamp": "2025-09-27T16:44:23.039859"
+  },
+  {
+    "node": 0,
+    "cls": 6,
+    "test_acc": 0.55078125,
+    "status": "success",
+    "timestamp": "2025-09-27T16:49:36.985450"
+  },
+  {
+    "node": 0,
+    "cls": 7,
+    "test_acc": 0.578125,
+    "status": "success",
+    "timestamp": "2025-09-27T16:52:43.933325"
+  },
+  {
+    "node": 0,
+    "cls": 8,
+    "test_acc": 0.58984375,
+    "status": "success",
+    "timestamp": "2025-09-27T16:55:42.990494"
+  },
+  {
+    "node": 0,
+    "cls": 9,
+    "test_acc": 0.60546875,
+    "status": "success",
+    "timestamp": "2025-09-27T16:58:42.772162"
+  },
+  {
+    "node": 1,
+    "cls": 0,
+    "test_acc": 0.6015625,
+    "status": "success",
+    "timestamp": "2025-09-27T17:03:08.626524"
+  },
+  {
+    "node": 1,
+    "cls": 1,
+    "test_acc": 0.58984375,
+    "status": "success",
+    "timestamp": "2025-09-27T17:06:03.449897"
+  },
+  {
+    "node": 1,
+    "cls": 2,
+    "test_acc": 0.57421875,
+    "status": "success",
+    "timestamp": "2025-09-27T17:08:58.846009"
+  },
+  {
+    "node": 1,
+    "cls": 3,
+    "test_acc": 0.58203125,
+    "status": "success",
+    "timestamp": "2025-09-27T17:14:04.526219"
+  },
+  {
+    "node": 1,
+    "cls": 4,
+    "test_acc": 0.609375,
+    "status": "success",
+    "timestamp": "2025-09-27T17:18:56.229472"
+  },
+  {
+    "node": 1,
+    "cls": 5,
+    "test_acc": 0.63671875,
+    "status": "success",
+    "timestamp": "2025-09-27T17:23:36.254882"
+  }
+]

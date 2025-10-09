@@ -27,11 +27,11 @@ def train(node_id):
         print(f"❌ Node {node_id} crashed with unexpected error: {e}")
 
 def load_state_dicts(n_nodes):
-    return [torch.load(sorted(glob.glob(f"results/{n}/*/policy_params.pt"))[-1]) for n in range(n_nodes)]
+    return [torch.load(sorted(glob.glob(f"results/{n}/*/policy_params_latest.pt"))[-1]) for n in range(n_nodes)]
 
 def save_state_dicts(models, n_nodes):
     for i in range(n_nodes):
-        save_path = sorted(glob.glob(f"results/{i}/*/policy_params.pt"))[-1]
+        save_path = sorted(glob.glob(f"results/{i}/*/policy_params_latest.pt"))[-1]
         torch.save(models[i], save_path)
 
 def exchange_multi_node(models, contact, fl_coeff=0.5):

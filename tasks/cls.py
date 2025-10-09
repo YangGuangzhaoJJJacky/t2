@@ -137,8 +137,9 @@ class ClsTask(Task):
         self.has_training_split = True
         self.num_samples_per_task = 400  # Hard code 400 samples per task
         self.task_datasets = [
-            load_dataset("yangguangzhaojjj/aqua_rat_cls", split=f"cls_{self.node+1}").select(range(1000)),  # train dataset
-            load_dataset("yangguangzhaojjj/aqua_rat_cls", split="test")  # test dataset
+            # load_dataset("yangguangzhaojjj/aqua_rat_cls", split=f"cls_{self.node+1}").select(range(1000)),  # train dataset
+            load_dataset("yangguangzhaojjj/aqua_rat_random", split=f"subset_{self.node}"),
+            load_dataset("yangguangzhaojjj/aqua_rat_test", split="test")  # test dataset
         ]
         
         # 加载数据并转换为CategorySample格式
@@ -209,7 +210,7 @@ class ClsTask(Task):
         model = vllm.LLM(
             model_id,
             max_model_len=2048,
-            gpu_memory_utilization=0.8,
+            gpu_memory_utilization=0.6,
             enforce_eager=True,
             dtype="float16",
             download_dir=get_download_dir(),

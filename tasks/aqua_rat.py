@@ -41,7 +41,7 @@ class AquaRatTask(Task):
 
     def get_train_data(self):
         print(f"#############current node {self.node} ###########")
-        train_data = load_dataset("yangguangzhaojjj/aqua_rat_cls", split=f"cls_{self.node+1}")
+        train_data = load_dataset("yangguangzhaojjj/aqua_rat_cls_new", split=f"cls_{self.node+1}")
         # train_data = load_dataset("yangguangzhaojjj/aqua_rat_cls", split=f"subset_{self.node}")
         train_data = train_data.select(range(1000))
         train_size = len(train_data)
@@ -55,8 +55,10 @@ class AquaRatTask(Task):
 
     def get_evaluator(self) -> Tuple:
         res = []
-        dataset_list = [load_dataset("yangguangzhaojjj/aqua_rat_cls", split=f"cls_{self.node+1}"),
-                        load_dataset("deepmind/aqua_rat", "raw", split="test")]
+        full_dataset = load_dataset("yangguangzhaojjj/aqua_rat_cls_new", split=f"cls_{self.node+1}")
+        dataset_list = [full_dataset,
+                        # load_dataset("deepmind/aqua_rat", "raw", split="test")]
+                        full_dataset.select(range(len(full_dataset) - 256, len(full_dataset)))]
         for dataset in dataset_list:
             samples = []
             for sample in dataset:
@@ -100,7 +102,7 @@ class AquaRatTask(Task):
         model = vllm.LLM(
             model_id,
             max_model_len=1500,
-            gpu_memory_utilization=0.8,
+            gpu_memory_utilization=0.7,
             enforce_eager=True,
             dtype="float16",
             download_dir=get_download_dir(),

@@ -12,13 +12,25 @@ from datasets import load_dataset, Dataset
 from tqdm import tqdm
 import json
 import dotenv
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import time
+import threading
 dotenv.load_dotenv()
-
+# split_name = "subset_0"
 # 配置
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")  # 从环境变量获取
-DATASET_NAME = "deepmind/aqua_rat"
-TARGET_DATASET = "yangguangzhaojjj/aqua_rat_cls"
-HF_TOKEN = os.getenv("HF_TOKEN", "")  # HuggingFace token
+DATASET_NAME = "yangguangzhaojjj/aqua_rat_raw"
+TARGET_DATASET = "yangguangzhaojjj/aqua_rat_test"
+HF_TOKEN = os.getenv("HF_TOKEN", "")
+
+# 并发配置
+MAX_CONCURRENT_REQUESTS = 1   # 串行处理，避免速率限制
+RATE_LIMIT_DELAY = 1        # 请求间隔增加到2秒
+REQUEST_TIMEOUT = 30          # 请求超时时间（秒）
+MAX_RETRIES = 5               # 最大重试次数
+
+# 全局锁用于速率限制
+rate_limit_lock = threading.Lock()
 
 # 10个分类类别
 CATEGORIES = {
@@ -85,6 +97,14 @@ def extract_classification(text: str) -> str:
     
     return "10"  # 默认分类为Word Problems & Logical Reasoning
 
+def classify_with_ai_rate_limited(question: str, options: List[str], system_msg: str) -> str:
+    """使用AI对单个问题进行分类，带速率限制"""
+    # 更保守的速率限制
+    with rate_limit_lock:
+        time.sleep(RATE_LIMIT_DELAY)
+    
+    return classify_with_ai(question, options, system_msg)
+
 def classify_with_ai(question: str, options: List[str], system_msg: str) -> str:
     """使用AI对单个问题进行分类"""
     if not OPENAI_API_KEY:
@@ -101,7 +121,7 @@ def classify_with_ai(question: str, options: List[str], system_msg: str) -> str:
     }
     
     data = {
-        "model": "gpt-4o",  # 使用更便宜的模型
+        "model": "gpt-4o",  # 使用正确的模型名
         "messages": [
             {"role": "system", "content": system_msg},
             {"role": "user", "content": full_question}
@@ -110,13 +130,24 @@ def classify_with_ai(question: str, options: List[str], system_msg: str) -> str:
         "max_tokens": 100
     }
     
+    # 重试机制
+    for attempt in range(MAX_RETRIES + 1):
+        try:
+            response = requests.post(
+                "https://api.openai.com/v1/chat/completions",
+                headers=headers,
+                json=data,
+                timeout=REQUEST_TIMEOUT
+            )
+            break  # 成功则跳出重试循环
+        except requests.exceptions.RequestException as e:
+            if attempt == MAX_RETRIES:
+                print(f"API请求失败，已重试{MAX_RETRIES}次: {e}")
+                return "10"
+            print(f"API请求失败，正在重试 ({attempt + 1}/{MAX_RETRIES}): {e}")
+            time.sleep(1)  # 重试前等待1秒
+    
     try:
-        response = requests.post(
-            "https://api.openai.com/v1/chat/completions",
-            headers=headers,
-            json=data,
-            timeout=30
-        )
         
         if response.status_code == 200:
             result = response.json()
@@ -125,19 +156,111 @@ def classify_with_ai(question: str, options: List[str], system_msg: str) -> str:
             return classification
         else:
             print(f"API请求失败: {response.status_code}")
+            try:
+                error_detail = response.json()
+                print(f"错误详情: {error_detail}")
+                
+                # 如果是速率限制错误，等待更长时间
+                if response.status_code == 429:
+                    if 'retry-after' in response.headers:
+                        retry_after = int(response.headers['retry-after'])
+                        print(f"速率限制，等待 {retry_after} 秒...")
+                        time.sleep(retry_after)
+                    else:
+                        # 从错误消息中提取等待时间
+                        error_msg = error_detail.get('error', {}).get('message', '')
+                        if 'Please try again in' in error_msg:
+                            import re
+                            match = re.search(r'Please try again in ([\d.]+)s', error_msg)
+                            if match:
+                                wait_time = float(match.group(1))
+                                print(f"速率限制，等待 {wait_time} 秒...")
+                                time.sleep(wait_time + 0.5)  # 额外等待0.5秒
+                            else:
+                                print("速率限制，等待 5 秒...")
+                                time.sleep(5)
+                        else:
+                            print("速率限制，等待 5 秒...")
+                            time.sleep(5)
+            except:
+                print(f"响应内容: {response.text}")
             return "10"  # 默认分类
             
     except Exception as e:
         print(f"分类时出错: {e}")
         return "10"  # 默认分类
 
-def main():
+def classify_batch_concurrent(dataset, system_msg: str, max_workers: int = MAX_CONCURRENT_REQUESTS) -> List[Dict[str, Any]]:
+    """使用并发方式批量分类"""
+    results = []
+    
+    def classify_single_item(item_with_index):
+        """分类单个项目的包装函数"""
+        index, item = item_with_index
+        try:
+            classification = classify_with_ai_rate_limited(
+                item['question'], 
+                item['options'], 
+                system_msg
+            )
+            return {
+                'index': index,
+                'question': item['question'],
+                'options': item['options'],
+                'correct': item['correct'],
+                'rationale': item['rationale'],
+                'classification': classification
+            }
+        except Exception as e:
+            print(f"分类第{index}个样本时出错: {e}")
+            return {
+                'index': index,
+                'question': item['question'],
+                'options': item['options'],
+                'correct': item['correct'],
+                'rationale': item['rationale'],
+                'classification': "10"  # 默认分类
+            }
+    
+    # 创建带索引的数据
+    indexed_data = list(enumerate(dataset))
+    
+    # 使用线程池并发处理
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        # 提交所有任务
+        future_to_index = {
+            executor.submit(classify_single_item, item): item[0] 
+            for item in indexed_data
+        }
+        
+        # 使用tqdm显示进度
+        with tqdm(total=len(dataset), desc="分类进度") as pbar:
+            for future in as_completed(future_to_index):
+                try:
+                    result = future.result()
+                    results.append(result)
+                    pbar.update(1)
+                except Exception as e:
+                    index = future_to_index[future]
+                    print(f"处理第{index}个样本时出错: {e}")
+                    pbar.update(1)
+    
+    # 按索引排序结果
+    results.sort(key=lambda x: x['index'])
+    
+    # 移除索引字段
+    for result in results:
+        del result['index']
+    
+    return results
+
+def main(split_name):
     """主函数"""
     print("开始加载AQuA-RAT数据集...")
     
     # 加载数据集
     try:
-        dataset = load_dataset(DATASET_NAME, "raw", split="test")
+        dataset = load_dataset(DATASET_NAME, split=split_name)
         print(f"成功加载数据集，共 {len(dataset)} 个样本")
     except Exception as e:
         print(f"加载数据集失败: {e}")
@@ -147,35 +270,33 @@ def main():
     system_msg = load_classification_prompt()
     print("已加载分类提示词")
     
-    # 对每个样本进行分类
-    classified_data = []
-    print("开始对样本进行分类...")
+    # 使用并发方式对样本进行分类
+    print(f"开始并发分类 (最大并发数: {MAX_CONCURRENT_REQUESTS})...")
+    start_time = time.time()
     
-    for i, sample in enumerate(tqdm(dataset, desc="分类进度")):
-        question = sample['question']
-        options = sample['options']
-        
-        # 获取AI分类
-        cls_result = classify_with_ai(question, options, system_msg)
-        
-        # 创建新的样本，添加cls字段
-        new_sample = {
-            **sample,  # 保留原有字段
-            'cls': cls_result,
-        }
-        classified_data.append(new_sample)
-        
-        # 每100个样本打印一次进度
-        if (i + 1) % 100 == 0:
-            print(f"已处理 {i + 1}/{len(dataset)} 个样本")
+    classified_data = classify_batch_concurrent(dataset, system_msg)
+    
+    end_time = time.time()
+    print(f"分类完成，耗时: {end_time - start_time:.2f}秒")
+    
+    # 将并发结果转换为数据集格式
+    dataset_data = []
+    for item in classified_data:
+        dataset_data.append({
+            'question': item['question'],
+            'options': item['options'],
+            'correct': item['correct'],
+            'rationale': item['rationale'],
+            'cls': item['classification']  # 添加cls字段
+        })
     
     # 创建新的数据集
-    new_dataset = Dataset.from_list(classified_data)
-    print(f"分类完成，共 {len(new_dataset)} 个样本")
+    new_dataset = Dataset.from_list(dataset_data)
+    print(f"数据集创建完成，共 {len(new_dataset)} 个样本")
     
     # 打印分类统计
     cls_counts = {}
-    for sample in classified_data:
+    for sample in dataset_data:
         cls = sample['cls']
         cls_counts[cls] = cls_counts.get(cls, 0) + 1
     
@@ -190,7 +311,7 @@ def main():
             print(f"\n开始推送到 {TARGET_DATASET}...")
             new_dataset.push_to_hub(
                 TARGET_DATASET, 
-                split="test",
+                split=split_name,
                 token=HF_TOKEN
             )
             print("成功推送到HuggingFace Hub!")
@@ -210,4 +331,5 @@ def main():
         print(f"已保存到本地文件: {local_path}")
 
 if __name__ == "__main__":
-    main()
+    # for split_name in range(10):
+    main("test")

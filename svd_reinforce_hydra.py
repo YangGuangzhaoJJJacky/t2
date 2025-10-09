@@ -19,6 +19,48 @@ from utils import (eval_model, eval_model_experts_prompt_based, forward,
                    load_hf_params_to_vllm)
 
 
+def load_best_val_acc_from_json(log_dir: str, default_val: float = 0.0, is_cer_metric: bool = False) -> tuple:
+    """从JSON日志文件中恢复最佳验证准确率和对应的测试准确率"""
+    json_path = f"{log_dir}/reinforce_log.json"
+    if not os.path.exists(json_path):
+        print(f"JSON文件不存在: {json_path}，使用默认值")
+        return default_val, 0.0
+    
+    try:
+        best_val_acc = default_val
+        test_at_best = 0.0
+        
+        with open(json_path, "r") as f:
+            lines = f.readlines()
+        
+        # 解析每一行JSON，找到最优的best_val_acc
+        for line in lines:
+            line = line.strip()
+            if line:
+                try:
+                    data = json.loads(line)
+                    if "best_val_acc" in data:
+                        current_val = data["best_val_acc"]
+                        # 根据指标类型判断是否更优：CER越小越好，准确率越大越好
+                        if is_cer_metric:
+                            is_better = current_val < best_val_acc
+                        else:
+                            is_better = current_val > best_val_acc
+                            
+                        if is_better:
+                            best_val_acc = current_val
+                            test_at_best = data.get("test_at_best_val", 0.0)
+                except json.JSONDecodeError:
+                    continue
+        
+        print(f"从JSON恢复: best_val_acc={best_val_acc}, test_at_best_val={test_at_best}")
+        return best_val_acc, test_at_best
+        
+    except Exception as e:
+        print(f"读取JSON文件失败: {e}，使用默认值")
+        return default_val, 0.0
+
+
 def wandb_init(cfg, run_name: str, group_name: str, log_dir: str):
     import wandb
 
@@ -312,11 +354,14 @@ def main(cfg):
     else:
         clipped_batch_size = min(batch_size, len(list(train_ix)))
     # 根据指标类型设置初始值：CER等错误率指标用无穷大，准确率指标用0
-    if hasattr(task_loader, 'target_metric_valid') and task_loader.target_metric_valid == 'cer':
-        best_val_acc = float('inf')  # CER越小越好，初始值设为无穷大
+    is_cer_metric = hasattr(task_loader, 'target_metric_valid') and task_loader.target_metric_valid == 'cer'
+    if is_cer_metric:
+        default_best_val = float('inf')  # CER越小越好，初始值设为无穷大
     else:
-        best_val_acc = 0.0  # 准确率越大越好，初始值设为0
-    test_at_best = 0.0
+        default_best_val = 0.0  # 准确率越大越好，初始值设为0
+    
+    # 尝试从JSON文件恢复最佳值（用于联邦学习重启场景）
+    best_val_acc, test_at_best = load_best_val_acc_from_json(log_dir, default_best_val, is_cer_metric)
     transfer_at_best = 0.0
     for i in range(num_iters+1):
         print(f"in iters {i}")

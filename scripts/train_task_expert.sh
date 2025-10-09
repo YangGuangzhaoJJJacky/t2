@@ -6,7 +6,9 @@ export PYTHONPATH=$PYTHONPATH:/home/yangguangzhao/t2/evaluation
 # ------- 动态读取传入的参数 -------
 NODE=${1:-0}  # 默认值为 0（如果未提供参数）
 # TASK="aqua_rat"
-# NUM_ITERS=100
+# NUM_ITERS=3
+# TASK="aqua_rat"
+# NUM_ITERS=0 # 只评估，不训练
 # TASK="stt"
 # NUM_ITERS=2000
 TASK="cls"
