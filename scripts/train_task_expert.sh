@@ -5,14 +5,14 @@ export PYTHONPATH=$PYTHONPATH:/home/yangguangzhao/t2/evaluation
 
 # ------- 动态读取传入的参数 -------
 NODE=${1:-0}  # 默认值为 0（如果未提供参数）
-# TASK="aqua_rat"
-# NUM_ITERS=3
+TASK="aqua_rat"
+NUM_ITERS=3
 # TASK="aqua_rat"
 # NUM_ITERS=0 # 只评估，不训练
 # TASK="stt"
 # NUM_ITERS=2000
-TASK="cls"
-NUM_ITERS=5
+# TASK="cls"
+# NUM_ITERS=5
 
 # ------- 找 checkpoint -------
 MATCHED_CKPT=$(ls results/$NODE/*/policy_params_latest.pt 2>/dev/null | head -n 1)

@@ -38,12 +38,14 @@ class AquaRatTask(Task):
         self.has_transfer_split = False
         self.has_training_split = True
         self.node = node
+        self.length_penalty_coef = 0.002
 
     def get_train_data(self):
         print(f"#############current node {self.node} ###########")
-        train_data = load_dataset("yangguangzhaojjj/aqua_rat_cls_new", split=f"cls_{self.node+1}")
-        # train_data = load_dataset("yangguangzhaojjj/aqua_rat_cls", split=f"subset_{self.node}")
-        train_data = train_data.select(range(1000))
+        # train_data = load_dataset("yangguangzhaojjj/aqua_rat_cls", split=f"cls_{self.node+1}")
+        train_data = load_dataset("yangguangzhaojjj/aqua_rat_random", split=f"subset_{self.node}")
+        max_samples = min(1000, len(train_data))
+        train_data = train_data.select(range(max_samples))
         train_size = len(train_data)
         train_ix = range(0, train_size-256)
         valid_ix = range(train_size-256, train_size)
@@ -53,12 +55,24 @@ class AquaRatTask(Task):
         rewards = [1.0 if x["correct"] else -1.0 for x in res.sample_details]
         return rewards
 
+    # def get_rewards(self, res):
+    #     rewards = []
+    #     for x in res.sample_details:
+    #         base_reward = 1.0 if x["correct"] else -1.0
+    #         output_text = x.get("output", x.get("response", x.get("generated_text", "")))
+    #         output_length = max(0,len(output_text)-500)
+    #         length_penalty = -self.length_penalty_coef * output_length
+    #         total_reward = max(-1,base_reward + length_penalty)
+    #         rewards.append(total_reward)
+    #     return rewards
+
     def get_evaluator(self) -> Tuple:
         res = []
-        full_dataset = load_dataset("yangguangzhaojjj/aqua_rat_cls_new", split=f"cls_{self.node+1}")
+        # full_dataset = load_dataset("yangguangzhaojjj/aqua_rat_cls", split=f"cls_{self.node+1}")
+        full_dataset = load_dataset("yangguangzhaojjj/aqua_rat_random", split=f"subset_{self.node}")
         dataset_list = [full_dataset,
-                        # load_dataset("deepmind/aqua_rat", "raw", split="test")]
-                        full_dataset.select(range(len(full_dataset) - 256, len(full_dataset)))]
+                        load_dataset("yangguangzhaojjj/aqua_rat_test", split="test")]
+                        # full_dataset.select(range(len(full_dataset) - 256, len(full_dataset)))]
         for dataset in dataset_list:
             samples = []
             for sample in dataset:

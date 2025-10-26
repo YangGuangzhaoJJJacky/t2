@@ -1,6 +1,7 @@
 import re
 from copy import deepcopy
 from typing import Dict, Optional
+from policy import LoRAPolicy, forward_lora
 
 import fishfarm
 import torch
@@ -117,7 +118,13 @@ def compose_new_params(
 
 @torch.no_grad()
 def forward(policy, model, base_params, decomposed_params, learnable_params):
-    """Forward pass."""
+    """Forward pass - 自动检测 SVD 或 LoRA policy."""
+    # 检测是否是 LoRA policy
+    
+    if isinstance(policy, LoRAPolicy):
+        return forward_lora(policy, model, base_params, learnable_params)
+    
+    # 默认 SVD 方式
     new_params = {}
     for k in base_params:
         if policy._should_train_layer(k):
@@ -147,7 +154,13 @@ def backward(
     decomposed_params,
     learnable_params,
 ):
-    """Backward pass."""
+    """Backward pass - 自动检测 SVD 或 LoRA policy."""
+    # 检测是否是 LoRA policy
+    from policy import LoRAPolicy, backward_lora
+    if isinstance(policy, LoRAPolicy):
+        return backward_lora(policy, model, base_params, learnable_params)
+    
+    # 默认 SVD 方式
     keys_to_backprop = [k for k in base_params if policy._should_train_layer(k)]
     last_key = keys_to_backprop[-1]
     for k in keys_to_backprop[:-1]:

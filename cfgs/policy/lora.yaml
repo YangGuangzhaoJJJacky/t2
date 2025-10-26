@@ -1,0 +1,19 @@
+shakeoff_policy:
+  _target_: policy.lora.LoRAPolicy
+  lora_rank: ${lora_rank}
+  lora_alpha: ${lora_alpha}
+  lora_dropout: ${lora_dropout}
+  init_scale: ${lora_init_scale}
+  train_layers: ${train_layers}  # 🔥 控制训练哪些层: "mlp", "self_attn", "both"
+
+# LoRA 超参数
+lora_rank: 8  # LoRA 秩，越大参数越多
+lora_alpha: 16  # LoRA 缩放因子，设为 rank 相同（scaling=1.0）以保持稳定
+lora_dropout: 0.1  # Dropout 率
+lora_init_scale: 0.001  # A 矩阵初始化缩放，较小值确保训练开始稳定
+train_layers: mlp  # 🔥 默认只训练 MLP 层
+
+# Policy 名称标识
+policy_mode: lora_r${lora_rank}_${train_layers}
+policy_name: ${policy_mode}_a${lora_alpha}
+

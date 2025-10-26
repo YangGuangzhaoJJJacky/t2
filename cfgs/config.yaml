@@ -8,11 +8,13 @@ defaults:
 
 num_iters: 3
 test_interval: 3
-lr: 3e-4
+# lr: 3e-4
+lr: 1e-5
 batch_size: 32
 train_val_size: 128
 seed: 42
 init_val: 0.1
+train_layers: both  # 🔥 训练哪些层: "mlp", "self_attn", "both"
 test_only: false
 model_dir: null
 save_legacy_params: false

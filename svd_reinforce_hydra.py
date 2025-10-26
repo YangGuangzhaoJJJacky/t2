@@ -31,27 +31,42 @@ def load_best_val_acc_from_json(log_dir: str, default_val: float = 0.0, is_cer_m
         test_at_best = 0.0
         
         with open(json_path, "r") as f:
-            lines = f.readlines()
+            content = f.read()
         
-        # 解析每一行JSON，找到最优的best_val_acc
-        for line in lines:
-            line = line.strip()
-            if line:
-                try:
-                    data = json.loads(line)
-                    if "best_val_acc" in data:
-                        current_val = data["best_val_acc"]
-                        # 根据指标类型判断是否更优：CER越小越好，准确率越大越好
-                        if is_cer_metric:
-                            is_better = current_val < best_val_acc
-                        else:
-                            is_better = current_val > best_val_acc
-                            
-                        if is_better:
-                            best_val_acc = current_val
-                            test_at_best = data.get("test_at_best_val", 0.0)
-                except json.JSONDecodeError:
-                    continue
+        # 🔥 修复：JSON文件是多行格式，需要按 "}\n{" 分割
+        # 处理多个JSON对象之间的换行
+        json_objects = []
+        current_obj = ""
+        brace_count = 0
+        
+        for char in content:
+            current_obj += char
+            if char == '{':
+                brace_count += 1
+            elif char == '}':
+                brace_count -= 1
+                if brace_count == 0 and current_obj.strip():
+                    json_objects.append(current_obj.strip())
+                    current_obj = ""
+        
+        # 解析每个JSON对象，找到最优的best_val_acc
+        for json_str in json_objects:
+            try:
+                data = json.loads(json_str)
+                if "best_val_acc" in data:
+                    current_val = data["best_val_acc"]
+                    print(f"current_best_val_acc: {current_val}")
+                    # 根据指标类型判断是否更优：CER越小越好，准确率越大越好
+                    if is_cer_metric:
+                        is_better = current_val < best_val_acc
+                    else:
+                        is_better = current_val > best_val_acc
+                        
+                    if is_better:
+                        best_val_acc = current_val
+                        test_at_best = data.get("test_at_best_val", 0.0)
+            except json.JSONDecodeError as e:
+                continue
         
         print(f"从JSON恢复: best_val_acc={best_val_acc}, test_at_best_val={test_at_best}")
         return best_val_acc, test_at_best
@@ -176,7 +191,9 @@ def main(cfg):
     tokenizer = AutoTokenizer.from_pretrained(model_id)
     base_params = model.state_dict()
 
-    train_layers = getattr(task_loader, 'train_layers', 'both')
+    # 从配置中获取 train_layers（优先级：cfg > task_loader > 默认值）
+    train_layers = getattr(cfg, 'train_layers', getattr(task_loader, 'train_layers', 'both'))
+    print(f"🎯 训练层配置: train_layers={train_layers}")
     def should_train_layer(layer_name):
         if "norm" in layer_name:
             return False
@@ -222,13 +239,28 @@ def main(cfg):
             cfg=cfg, group_name=group_name, run_name=run_name, log_dir=log_dir
         )
 
-    policy: Policy = hydra.utils.instantiate(
-        cfg.shakeoff_policy,
-        base_params=base_params,
-        decomposed_params=decomposed_params,
-        gpu=gpu,
-        train_layers=train_layers,  # 🔥 传递训练层配置
-    )
+    # 检测是否使用 LoRA policy（不需要 decomposed_params）
+    from policy import LoRAPolicy
+    policy_class = cfg.shakeoff_policy._target_
+    is_lora_policy = "LoRAPolicy" in policy_class or "lora" in policy_class.lower()
+    
+    if is_lora_policy:
+        print("🔧 使用 LoRA Policy")
+        policy: Policy = hydra.utils.instantiate(
+            cfg.shakeoff_policy,
+            base_params=base_params,
+            gpu=gpu,
+            train_layers=train_layers,
+        )
+    else:
+        print("🔧 使用 SVD Policy")
+        policy: Policy = hydra.utils.instantiate(
+            cfg.shakeoff_policy,
+            base_params=base_params,
+            decomposed_params=decomposed_params,
+            gpu=gpu,
+            train_layers=train_layers,  # 🔥 传递训练层配置
+        )
  
     optimization_algorithm: OptimizationAlgorithm = hydra.utils.instantiate(
         cfg.optimization_algorithm,
@@ -363,6 +395,7 @@ def main(cfg):
     # 尝试从JSON文件恢复最佳值（用于联邦学习重启场景）
     best_val_acc, test_at_best = load_best_val_acc_from_json(log_dir, default_best_val, is_cer_metric)
     transfer_at_best = 0.0
+    
     for i in range(num_iters+1):
         print(f"in iters {i}")
         if i == 0:
@@ -400,7 +433,15 @@ def main(cfg):
                     ]
                     lists_to_log["policy_param_mag"] = param_mags
 
-                generated_params_list = list(learnable_params.values())
+                # 处理不同 policy 的参数格式
+                generated_params_list = []
+                for v in learnable_params.values():
+                    if isinstance(v, dict):
+                        # LoRA policy: {"A": tensor, "B": tensor}
+                        generated_params_list.extend([v["A"], v["B"]])
+                    else:
+                        # SVD policy: tensor
+                        generated_params_list.append(v)
 
                 generated_param_mean = [p.mean().item() for p in generated_params_list]
                 generated_param_mags = [
@@ -458,11 +499,14 @@ def main(cfg):
                     transfer_at_best = transfer_res.aggregate_metrics[
                         task_loader.target_metric_transfer
                     ]
-                print("best_val_acc updated")
+                print(f"✅ best_val_acc updated: {current_metric:.4f}")
                 path = f"{log_dir}/policy_params.pt"
                 torch.save(policy.state_dict(), path)
                 if save_legacy_params:
                     torch.save(learnable_params, f"{log_dir}/learnable_params.pt")
+            else:
+                # 性能未提升，跳过保存，沿用之前保存的最优权重
+                print(f"⚠️ Valid性能未提升 (当前:{current_metric:.4f} vs 最优:{best_val_acc:.4f})，跳过保存")
 
             path = f"{log_dir}/policy_params_latest.pt"
             torch.save(policy.state_dict(), path)
